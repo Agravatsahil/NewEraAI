@@ -38,6 +38,7 @@ function Login() {
         throw new Error(data?.message || 'Login failed')
       }
 
+      localStorage.setItem('newera_user_email', email)
       showSuccess('Login successful')
       navigate('/dashboard')
     } catch (err) {

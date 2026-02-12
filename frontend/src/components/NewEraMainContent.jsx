@@ -77,6 +77,16 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
   const [isLoading, setIsLoading] = useState(false);
   const typingTimeoutRef = useRef(null);
 
+  const PROMPT_LIMIT = 3;
+  const [promptsUsed, setPromptsUsed] = useState(0);
+  const userEmail = (typeof window !== 'undefined' && localStorage.getItem('newera_user_email')) || 'guest';
+  const promptLimitStorageKey = `newera_prompt_count:${userEmail}`;
+
+  useEffect(() => {
+    const stored = Number(localStorage.getItem(promptLimitStorageKey) || 0);
+    setPromptsUsed(Number.isFinite(stored) ? stored : 0);
+  }, [promptLimitStorageKey]);
+
   // Typing effect function
   const typeText = (text, callback) => {
     setIsTyping(true);
@@ -105,9 +115,11 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
   } = useContext(AppContext);
 
   const getReply = async () => {
-    setIsLoading(true);
+    if (promptsUsed >= PROMPT_LIMIT) return;
     const prompt = inputValue;
     if (!prompt.trim()) return;
+
+    setIsLoading(true);
 
     setPrompt(prompt);
 
@@ -125,6 +137,9 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
     try {
       const response = await fetch(`http://localhost:8080/api/threads/${currentThreadId}/messages`, options);
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || 'Request failed');
+      }
       // console.log("Response:", data);
 
       // Add user message immediately
@@ -135,6 +150,12 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
         return updated;
       });
       setInputValue("");
+
+      setPromptsUsed(prev => {
+        const next = Math.min(PROMPT_LIMIT, prev + 1);
+        localStorage.setItem(promptLimitStorageKey, String(next));
+        return next;
+      });
 
       // Switch to chat view if this is the first message
       if (isNewChat) {
@@ -497,6 +518,25 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
             width: '100%',
             maxWidth: 900,
             mx: 'auto',
+            mb: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Typography variant="caption" sx={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>
+            {`${promptsUsed}/${PROMPT_LIMIT}`}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#6B7280', fontSize: 12, fontWeight: 600 }}>
+            Prompt limit
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 900,
+            mx: 'auto',
             bgcolor: '#F9FAFB',
             borderRadius: '24px',
             border: '1px solid #E5E7EB',
@@ -512,8 +552,12 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
-              e.key === 'Enter' && getReply();
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                getReply();
+              }
             }}
+            disabled={isLoading || promptsUsed >= PROMPT_LIMIT}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '24px',
@@ -591,6 +635,7 @@ const NewEraMainContent = ({ isSidebarOpen = true, onOpenSidebar }) => {
 
             <PrimaryButton
               onClick={getReply}
+              disabled={isLoading || promptsUsed >= PROMPT_LIMIT}
               sx={{
                 minWidth: 0,
                 width: 44,
