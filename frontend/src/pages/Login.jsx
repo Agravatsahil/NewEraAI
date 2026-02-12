@@ -89,7 +89,7 @@ function Login() {
           display: 'flex',
           flexDirection: 'column',
         }}
-      >
+      > 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
           <SecondaryButton
             onClick={() => navigate('/')}
