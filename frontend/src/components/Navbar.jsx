@@ -199,7 +199,7 @@ const Navbar = () => {
           ))}
           <ListItem sx={{ mt: 2 }}>
             <PrimaryButton
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => navigate('/signup')}
               sx={{ width: '100%', padding: '12px 24px' }}
             >
               Login / Signup
